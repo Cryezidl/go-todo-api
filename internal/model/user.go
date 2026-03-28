@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	dtoUser "github.com/Cryezidl/go-todo-api/internal/dto/user"
 	"github.com/google/uuid"
 )
 
@@ -18,4 +19,17 @@ type User struct {
 	Timezone     string    `db:"timezone"`
 	Language     string    `db:"lang"`
 	Theme        string    `db:"theme"`
+}
+
+func (u *User) ToResponse() dtoUser.UserResponse {
+	return dtoUser.UserResponse{
+		ID:         u.ID,
+		Email:      u.Email,
+		Username:   u.Username,
+		Role:       u.Role,
+		Created_At: u.Created_At,
+		Timezone:   u.Timezone,
+		Language:   u.Language,
+		Theme:      u.Theme,
+	}
 }

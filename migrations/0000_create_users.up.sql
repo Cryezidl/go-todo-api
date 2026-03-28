@@ -9,7 +9,7 @@ CREATE TABLE users (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     timezone TEXT NOT NULL DEFAULT 'UTC',
     lang TEXT NOT NULL DEFAULT 'ENG',
-    theme TEXT NOT NULL DEFAULT 'console'
+    theme TEXT NOT NULL DEFAULT 'system'
 );
 
 

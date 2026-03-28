@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/Cryezidl/go-todo-api/internal/model"
+	"github.com/Cryezidl/go-todo-api/pkg/myerrors"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -17,8 +18,8 @@ type UserRepository struct {
 	log *slog.Logger
 }
 
-func NewUserRepository(db *sqlx.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *sqlx.DB, log *slog.Logger) *UserRepository {
+	return &UserRepository{db: db, log: log}
 }
 
 func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
@@ -82,7 +83,7 @@ func (r *UserRepository) FindByUserId(ctx context.Context, id uuid.UUID) (*model
 				slog.String("op", op),
 				slog.String("id", id.String()),
 			)
-			return nil, nil
+			return nil, myerrors.ErrUserNotFound
 		}
 
 		r.log.Error("failed to get user by id",
@@ -118,7 +119,7 @@ func (r *UserRepository) FindByUserEmail(ctx context.Context, email string) (*mo
 				slog.String("op", op),
 				slog.String("email", email),
 			)
-			return nil, nil
+			return nil, myerrors.ErrUserNotFound
 		}
 
 		r.log.Error("failed to get user by email",
@@ -154,10 +155,10 @@ func (r *UserRepository) FindByUserName(ctx context.Context, username string) (*
 				slog.String("op", op),
 				slog.String("name", username),
 			)
-			return nil, nil
+			return nil, myerrors.ErrUserNotFound
 		}
 
-		r.log.Error("failed to get user by email",
+		r.log.Error("failed to get user by name",
 			slog.String("op", op),
 			slog.String("error", err.Error()),
 			slog.String("name", username),
@@ -169,6 +170,42 @@ func (r *UserRepository) FindByUserName(ctx context.Context, username string) (*
 		slog.String("op", op),
 		slog.String("id", user.ID.String()),
 		slog.String("name", username),
+	)
+	return user, nil
+}
+
+func (r *UserRepository) FindByUserEmailOrName(ctx context.Context, login string) (*model.User, error) {
+	op := "repository.postgres.UserRepository.FindByUserEmailOrName"
+
+	r.log.Debug("attempting to get user by username or email",
+		slog.String("op", op),
+		slog.String("login way", login),
+	)
+
+	user := &model.User{}
+	query := `SELECT * FROM users WHERE username=$1 OR email=$1 LIMIT 1`
+
+	if err := r.db.GetContext(ctx, user, query, login); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			r.log.Debug("user not found",
+				slog.String("op", op),
+				slog.String("login way", login),
+			)
+			return nil, myerrors.ErrUserNotFound
+		}
+
+		r.log.Error("failed to get user by name or email",
+			slog.String("op", op),
+			slog.String("error", err.Error()),
+			slog.String("login way", login),
+		)
+		return nil, err
+	}
+
+	r.log.Debug("user was found",
+		slog.String("op", op),
+		slog.String("id", user.ID.String()),
+		slog.String("login way", login),
 	)
 	return user, nil
 }
@@ -222,13 +259,23 @@ func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	)
 
 	query := `DELETE FROM users WHERE id=$1`
-	if _, err := r.db.NamedExecContext(ctx, query, id); err != nil {
+	rows, err := r.db.NamedExecContext(ctx, query, id)
+
+	if err != nil {
 		r.log.Error("failed to delete user",
 			slog.String("op", op),
 			slog.String("error", err.Error()),
 			slog.String("id", id.String()),
 		)
 		return err
+	}
+	rowsCount, _ := rows.RowsAffected()
+	if rowsCount == 0 {
+		r.log.Error("user not found",
+			slog.String("op", op),
+			slog.String("id", id.String()),
+		)
+		return myerrors.ErrUserNotFound
 	}
 	r.log.Debug("user was deleted",
 		slog.String("op", op),
