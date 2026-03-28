@@ -16,3 +16,9 @@ type UserResponse struct {
 	Language   string    `json:"language"`
 	Theme      string    `json:"theme"`
 }
+
+type PublicUserResponse struct {
+	ID         uuid.UUID `json:"id"`
+	Username   string    `json:"username"`
+	Created_At time.Time `json:"created_at"`
+}

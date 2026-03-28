@@ -33,3 +33,11 @@ func (u *User) ToResponse() dtoUser.UserResponse {
 		Theme:      u.Theme,
 	}
 }
+
+func (u *User) ToPublicResponse() dtoUser.PublicUserResponse {
+	return dtoUser.PublicUserResponse{
+		ID:         u.ID,
+		Username:   u.Username,
+		Created_At: u.Created_At,
+	}
+}

@@ -9,6 +9,7 @@ import (
 	dtoUser "github.com/Cryezidl/go-todo-api/internal/dto/user"
 	"github.com/Cryezidl/go-todo-api/internal/repository"
 	"github.com/Cryezidl/go-todo-api/pkg/hash"
+	"github.com/Cryezidl/go-todo-api/pkg/myerrors"
 	"github.com/google/uuid"
 )
 
@@ -21,57 +22,54 @@ func NewUserService(userRepository repository.UserRepository, log *slog.Logger) 
 	return &UserService{userRepository: userRepository, log: log}
 }
 
-func (s *UserService) GetById(ctx context.Context, id uuid.UUID) (*dtoUser.UserResponse, error) {
+func (s *UserService) GetById(ctx context.Context, id uuid.UUID) (dtoUser.UserResponse, error) {
 	//const op = "service.user.UserService.GetById"
 
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return dtoUser.UserResponse{}, err
 	}
 
 	user, err := s.userRepository.FindByUserId(ctx, id)
 	if err != nil {
-		return nil, err
+		return dtoUser.UserResponse{}, err
 	}
 	if user == nil {
 		s.log.Debug("user not found in service", slog.String("id", id.String()))
-		return nil, repository.ErrUserNotFound
+		return dtoUser.UserResponse{}, myerrors.ErrUserNotFound
 	}
-	resp := user.ToResponse()
-	return &resp, nil
+	return user.ToResponse(), nil
 }
 
-func (s *UserService) GetByEmail(ctx context.Context, email string) (*dtoUser.UserResponse, error) {
+func (s *UserService) GetByEmail(ctx context.Context, email string) (dtoUser.UserResponse, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return dtoUser.UserResponse{}, err
 	}
 
 	user, err := s.userRepository.FindByUserEmail(ctx, email)
 	if err != nil {
-		return nil, err
+		return dtoUser.UserResponse{}, err
 	}
 	if user == nil {
 		s.log.Debug("user not found in service", slog.String("email", email))
-		return nil, repository.ErrUserNotFound
+		return dtoUser.UserResponse{}, myerrors.ErrUserNotFound
 	}
-	resp := user.ToResponse()
-	return &resp, nil
+	return user.ToResponse(), nil
 }
 
-func (s *UserService) GetByName(ctx context.Context, username string) (*dtoUser.UserResponse, error) {
+func (s *UserService) GetByName(ctx context.Context, username string) (dtoUser.PublicUserResponse, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return dtoUser.PublicUserResponse{}, err
 	}
 
 	user, err := s.userRepository.FindByUserName(ctx, username)
 	if err != nil {
-		return nil, err
+		return dtoUser.PublicUserResponse{}, err
 	}
 	if user == nil {
 		s.log.Debug("user not found in service", slog.String("username", username))
-		return nil, repository.ErrUserNotFound
+		return dtoUser.PublicUserResponse{}, myerrors.ErrUserNotFound
 	}
-	resp := user.ToResponse()
-	return &resp, nil
+	return user.ToPublicResponse(), nil
 }
 
 func (s *UserService) UpdateProfile(ctx context.Context, newData dtoUser.UpdateUserProfile, id uuid.UUID) error {
@@ -87,7 +85,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, newData dtoUser.UpdateU
 	}
 	if user == nil {
 		s.log.Warn("user not found for update", slog.String("op", op), slog.String("id", id.String()))
-		return repository.ErrUserNotFound
+		return myerrors.ErrUserNotFound
 	}
 	//заменяем данные этого объекта юзера
 	if newData.Username != nil {
@@ -168,13 +166,13 @@ func (s *UserService) UpdatePassword(ctx context.Context, newData dtoUser.Update
 	}
 	if user == nil {
 		s.log.Warn("user not found for update", slog.String("op", op), slog.String("id", id.String()))
-		return errors.New("user not found")
+		return myerrors.ErrUserNotFound
 	}
 
 	//Проверка старого пароля
 	if err := hash.CheckPassword(user.PasswordHash, newData.OldPassword); err != nil {
 		s.log.Debug("wrong password attempt", slog.String("op", op), slog.String("id", id.String()))
-		return errors.New("wrong password")
+		return myerrors.ErrInvalidCredentials
 	}
 
 	//хешируем пароль
@@ -210,12 +208,12 @@ func (s *UserService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 	if user == nil {
 		s.log.Warn("user not found for delete", slog.String("op", op), slog.String("id", id.String()))
-		return repository.ErrUserNotFound
+		return myerrors.ErrUserNotFound
 	}
 
 	//вызываем метод удаления
 	if err := s.userRepository.Delete(ctx, id); err != nil {
-		if errors.Is(err, repository.ErrUserNotFound) {
+		if errors.Is(err, myerrors.ErrUserNotFound) {
 			return errors.New("user not found")
 		}
 		return err
