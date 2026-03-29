@@ -11,7 +11,7 @@ import (
 
 	"github.com/Cryezidl/go-todo-api/internal/model"
 	"github.com/Cryezidl/go-todo-api/pkg/hash"
-	"github.com/Cryezidl/go-todo-api/pkg/jwt"
+	"github.com/Cryezidl/go-todo-api/pkg/jwtutils"
 	"github.com/Cryezidl/go-todo-api/pkg/myerrors"
 )
 
@@ -79,7 +79,7 @@ func (s *AuthService) Login(ctx context.Context, req dtoAuth.LoginInput) (dtoUse
 		return dtoUser.UserResponse{}, "", myerrors.ErrInvalidCredentials
 	}
 	//если ок то делаем jwt
-	jwtKey, err := jwt.GenerateJWTToken([]byte(s.Secret), user.ID, user.Role, s.Expiration)
+	jwtKey, err := jwtutils.GenerateJWTToken([]byte(s.Secret), user.ID, user.Role, s.Expiration)
 	if err != nil {
 		return dtoUser.UserResponse{}, "", err
 	}
