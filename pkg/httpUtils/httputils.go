@@ -35,3 +35,11 @@ func RespondWithJSON(w http.ResponseWriter, code int, data interface{}, log *slo
 		http.Error(w, `{"error":"Internal server error"}`, code)
 	}
 }
+
+func ReadFromJSON(r *http.Request, obj any) error {
+	if err := json.NewDecoder(r.Body).Decode(obj); err != nil {
+		return err
+	}
+	defer r.Body.Close()
+	return nil
+}

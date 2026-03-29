@@ -72,20 +72,20 @@ func (s *UserService) GetByName(ctx context.Context, username string) (dtoUser.P
 	return user.ToPublicResponse(), nil
 }
 
-func (s *UserService) UpdateProfile(ctx context.Context, newData dtoUser.UpdateUserProfile, id uuid.UUID) error {
+func (s *UserService) UpdateProfile(ctx context.Context, newData dtoUser.UpdateUserProfile, id uuid.UUID) (dtoUser.UserResponse, error) {
 	const op = "service.UserService.UpdateProfile"
 
 	if err := ctx.Err(); err != nil {
-		return err
+		return dtoUser.UserResponse{}, err
 	}
 	//Получить текущее состояние юзера model.User
 	user, err := s.userRepository.FindByUserId(ctx, id)
 	if err != nil {
-		return err
+		return dtoUser.UserResponse{}, err
 	}
 	if user == nil {
 		s.log.Warn("user not found for update", slog.String("op", op), slog.String("id", id.String()))
-		return myerrors.ErrUserNotFound
+		return dtoUser.UserResponse{}, myerrors.ErrUserNotFound
 	}
 	//заменяем данные этого объекта юзера
 	if newData.Username != nil {
@@ -103,10 +103,10 @@ func (s *UserService) UpdateProfile(ctx context.Context, newData dtoUser.UpdateU
 	//вызываем метод репозитория
 	err = s.userRepository.Update(ctx, user)
 	if err != nil {
-		return err
+		return dtoUser.UserResponse{}, err
 	}
 	s.log.Info("profile updated successfully", slog.String("id", id.String()))
-	return nil
+	return user.ToResponse(), nil
 }
 
 func (s *UserService) UpdateEmail(ctx context.Context, newData dtoUser.UpdateUserEmail, id uuid.UUID) error {
@@ -122,13 +122,13 @@ func (s *UserService) UpdateEmail(ctx context.Context, newData dtoUser.UpdateUse
 	}
 	if user == nil {
 		s.log.Warn("user not found for update", slog.String("op", op), slog.String("id", id.String()))
-		return errors.New("user not found")
+		return myerrors.ErrUserNotFound
 	}
 
 	//Проверка пароля
 	if err := hash.CheckPassword(user.PasswordHash, newData.Password); err != nil {
 		s.log.Debug("wrong password attempt", slog.String("op", op), slog.String("id", id.String()))
-		return errors.New("wrong password")
+		return myerrors.ErrInvalidCredentials
 	}
 
 	// Проверка уникальности новой почты
@@ -138,7 +138,7 @@ func (s *UserService) UpdateEmail(ctx context.Context, newData dtoUser.UpdateUse
 	}
 
 	if alreadyExists != nil {
-		return errors.New("email is already in use")
+		return myerrors.ErrEmailTaken
 	}
 
 	//заменяем данные этого объекта юзера
