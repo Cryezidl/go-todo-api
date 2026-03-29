@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/Cryezidl/go-todo-api/internal/model"
 	"github.com/Cryezidl/go-todo-api/pkg/myerrors"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 type UserRepository struct {
@@ -35,12 +36,23 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 	email, username, password_hash, user_role,
 	is_active, timezone, lang, theme) 
 	VALUES (
-	:email, :username, :password_hash, :user_role
+	:email, :username, :password_hash, :user_role,
 	:is_active, :timezone, :lang, :theme)
 	Returning id, created_at`
 
 	rows, err := r.db.NamedQueryContext(ctx, query, user)
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			if pqErr.Code == "23505" { // Unique Violation
+				if strings.Contains(pqErr.Message, "email") {
+					return myerrors.ErrEmailTaken
+				}
+				if strings.Contains(pqErr.Message, "username") {
+					return myerrors.ErrUsernameTaken
+				}
+			}
+		}
 		r.log.Error("failed to execute insert query",
 			slog.String("op", op),
 			slog.String("error", err.Error()),

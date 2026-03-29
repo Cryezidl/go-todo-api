@@ -214,7 +214,7 @@ func (s *UserService) Delete(ctx context.Context, id uuid.UUID) error {
 	//вызываем метод удаления
 	if err := s.userRepository.Delete(ctx, id); err != nil {
 		if errors.Is(err, myerrors.ErrUserNotFound) {
-			return errors.New("user not found")
+			return myerrors.ErrUserNotFound
 		}
 		return err
 	}

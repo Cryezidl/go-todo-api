@@ -8,6 +8,7 @@ var (
 	//servie or db
 	ErrUserNotFound       = errors.New("user not found")
 	ErrEmailTaken         = errors.New("email already registered")
+	ErrUsernameTaken      = errors.New("username already registered")
 	ErrInvalidCredentials = errors.New("invalid credentials")
 
 	//handlers
@@ -32,4 +33,5 @@ var (
 	ErrPasswordSameAsOld     = errors.New("new password must be different from the old one")
 	ErrPasswordTooWeak       = errors.New("password must include upper, lower case letters and digits")
 	ErrInvalidPassword       = errors.New("invalid password")
+	ErrInvalidLoginFormat    = errors.New("invalid login format")
 )

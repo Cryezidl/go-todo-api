@@ -175,4 +175,24 @@ func (h *UserHandler) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request)
+func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	//взять Id из контекста
+	id, ok := auth.GetUserId(r.Context())
+	if !ok {
+		httputils.RespondWithError(w, http.StatusUnauthorized, myerrors.ErrUnauthorized.Error(), h.log)
+		return
+	}
+
+	//вызвать сервис
+	if err := h.userService.Delete(r.Context(), id); err != nil {
+		if errors.Is(err, myerrors.ErrUserNotFound) {
+			httputils.RespondWithError(w, http.StatusNotFound, err.Error(), h.log)
+			return
+		}
+		httputils.RespondWithError(w, http.StatusInternalServerError, myerrors.ErrInternalServer.Error(), h.log)
+		return
+	}
+
+	//написать хедер
+	w.WriteHeader(http.StatusNoContent)
+}

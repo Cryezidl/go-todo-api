@@ -37,9 +37,9 @@ func RespondWithJSON(w http.ResponseWriter, code int, data interface{}, log *slo
 }
 
 func ReadFromJSON(r *http.Request, obj any) error {
+	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(obj); err != nil {
 		return err
 	}
-	defer r.Body.Close()
 	return nil
 }

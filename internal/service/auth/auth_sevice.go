@@ -26,12 +26,12 @@ func NewAuthService(userRepository repository.UserRepository, log *slog.Logger) 
 	return &AuthService{userRepository: userRepository, log: log}
 }
 
-func (s *AuthService) RegisterUser(ctx context.Context, req dtoAuth.RegisterInput) (dtoUser.UserResponse, error) {
+func (s *AuthService) RegisterUser(ctx context.Context, req dtoAuth.RegisterInput) (dtoUser.UserResponse, string, error) {
 
 	//хеширование пароля
 	passwordHash, err := hash.HashPassword(req.Password)
 	if err != nil {
-		return dtoUser.UserResponse{}, err
+		return dtoUser.UserResponse{}, "", err
 	}
 
 	//заполнение незаполненных полей
@@ -44,27 +44,29 @@ func (s *AuthService) RegisterUser(ctx context.Context, req dtoAuth.RegisterInpu
 	if req.Timezone == "" {
 		req.Language = "UTC"
 	}
-	if req.Role == "" {
-		req.Role = "client"
-	}
 
 	//создаем user
 	user := &model.User{
 		Email:        req.Email,
 		Username:     req.Username,
 		PasswordHash: passwordHash,
-		Role:         req.Role,
+		Role:         "user",
 		Timezone:     req.Timezone,
 		Language:     req.Language,
 		Theme:        req.Theme,
 	}
 	//create репозитория
 	if err := s.userRepository.Create(ctx, user); err != nil {
-		return dtoUser.UserResponse{}, err
+		return dtoUser.UserResponse{}, "", err
 	}
 	//создать первый туду лист
 
-	return user.ToResponse(), nil
+	//создаеп jwt токен
+	jwtKey, err := jwtutils.GenerateJWTToken([]byte(s.Secret), user.ID, user.Role, s.Expiration)
+	if err != nil {
+		return dtoUser.UserResponse{}, "", err
+	}
+	return user.ToResponse(), jwtKey, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, req dtoAuth.LoginInput) (dtoUser.UserResponse, string, error) {

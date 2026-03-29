@@ -13,5 +13,5 @@ CREATE TABLE tasks (
 
     
     CONSTRAINT fk_list FOREIGN KEY (list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
-    CONSTRAINT fk_creator FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
+    CONSTRAINT fk_creator FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
 );
