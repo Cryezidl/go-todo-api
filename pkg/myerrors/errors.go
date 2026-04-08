@@ -6,10 +6,13 @@ import (
 
 var (
 	//servie or db
+	//User
 	ErrUserNotFound       = errors.New("user not found")
 	ErrEmailTaken         = errors.New("email already registered")
 	ErrUsernameTaken      = errors.New("username already registered")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	//Task List
+	ErrTaskListNotFound = errors.New("task list not found")
 
 	//handlers
 	ErrUnauthorized   = errors.New("unauthorized")
