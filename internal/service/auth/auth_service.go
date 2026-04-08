@@ -18,12 +18,12 @@ import (
 type AuthService struct {
 	userRepository repository.UserRepository
 	log            *slog.Logger
-	Secret         string
-	Expiration     time.Duration
+	secret         string
+	expiration     time.Duration
 }
 
-func NewAuthService(userRepository repository.UserRepository, log *slog.Logger) *AuthService {
-	return &AuthService{userRepository: userRepository, log: log}
+func NewAuthService(userRepository repository.UserRepository, log *slog.Logger, secret string, exp time.Duration) *AuthService {
+	return &AuthService{userRepository: userRepository, log: log, secret: secret, expiration: exp}
 }
 
 func (s *AuthService) RegisterUser(ctx context.Context, req dtoAuth.RegisterInput) (dtoUser.UserResponse, string, error) {
@@ -42,7 +42,7 @@ func (s *AuthService) RegisterUser(ctx context.Context, req dtoAuth.RegisterInpu
 		req.Language = "ENG"
 	}
 	if req.Timezone == "" {
-		req.Language = "UTC"
+		req.Timezone = "UTC"
 	}
 
 	//создаем user
@@ -62,7 +62,7 @@ func (s *AuthService) RegisterUser(ctx context.Context, req dtoAuth.RegisterInpu
 	//создать первый туду лист
 
 	//создаеп jwt токен
-	jwtKey, err := jwtutils.GenerateJWTToken([]byte(s.Secret), user.ID, user.Role, s.Expiration)
+	jwtKey, err := jwtutils.GenerateJWTToken([]byte(s.secret), user.ID, user.Role, s.expiration)
 	if err != nil {
 		return dtoUser.UserResponse{}, "", err
 	}
@@ -81,7 +81,7 @@ func (s *AuthService) Login(ctx context.Context, req dtoAuth.LoginInput) (dtoUse
 		return dtoUser.UserResponse{}, "", myerrors.ErrInvalidCredentials
 	}
 	//если ок то делаем jwt
-	jwtKey, err := jwtutils.GenerateJWTToken([]byte(s.Secret), user.ID, user.Role, s.Expiration)
+	jwtKey, err := jwtutils.GenerateJWTToken([]byte(s.secret), user.ID, user.Role, s.expiration)
 	if err != nil {
 		return dtoUser.UserResponse{}, "", err
 	}

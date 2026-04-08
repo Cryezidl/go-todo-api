@@ -34,7 +34,6 @@ func SetupRouters(h *Handlers, mw Middlewares) *chi.Mux {
 	r.Route("/api/v1", func(r chi.Router) {
 		userrouters.RegisterUserRoutes(r, h.UserHandlers, mw.Auth)
 		authrouters.RegisterAuthRoutes(r, h.AuthHandlers)
-
 	})
 	return r
 }

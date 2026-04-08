@@ -133,7 +133,7 @@ func (s *UserService) UpdateEmail(ctx context.Context, newData dtoUser.UpdateUse
 
 	// Проверка уникальности новой почты
 	alreadyExists, err := s.userRepository.FindByUserEmail(ctx, newData.NewEmail)
-	if err != nil {
+	if err != nil && !errors.Is(err, myerrors.ErrUserNotFound) {
 		return err
 	}
 

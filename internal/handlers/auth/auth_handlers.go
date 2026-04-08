@@ -19,7 +19,7 @@ type AuthHandler struct {
 	tokenDur    time.Duration
 }
 
-func NewUserHandler(authService *service.AuthService, log *slog.Logger, tokenDur time.Duration) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService, log *slog.Logger, tokenDur time.Duration) *AuthHandler {
 	return &AuthHandler{authService: authService, log: log, tokenDur: tokenDur}
 }
 

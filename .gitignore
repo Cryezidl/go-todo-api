@@ -1,8 +1,13 @@
+# Бинарники Go (появятся после сборки)
+/cmd/api/api
+/api
 *.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-vendor/
+
+# IDE (если используете)
+.idea/
+.vscode/
+
+# Env файлы (если есть секреты)
 .env
-etc.
+.env.docker
+.env.test
