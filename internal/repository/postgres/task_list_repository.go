@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/Cryezidl/go-todo-api/internal/model"
 	"github.com/Cryezidl/go-todo-api/pkg/myerrors"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
 
@@ -39,7 +41,15 @@ func (r *TaskListRepository) Create(ctx context.Context, taskList *model.TaskLis
 	rows, err := r.db.NamedQueryContext(ctx, query, taskList)
 
 	if err != nil {
-		return err
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			if pqErr.Code == "23505" { // Unique Violation
+				if strings.Contains(pqErr.Message, "title") {
+					return myerrors.ErrTaskListAlreadyExists
+				}
+				return err
+			}
+		}
 	}
 	defer rows.Close()
 

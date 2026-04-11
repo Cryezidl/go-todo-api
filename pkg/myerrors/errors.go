@@ -12,7 +12,9 @@ var (
 	ErrUsernameTaken      = errors.New("username already registered")
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	//Task List
-	ErrTaskListNotFound = errors.New("task list not found")
+	ErrTaskListNotFound      = errors.New("task list not found")
+	ErrAccessDenied          = errors.New("access denied")
+	ErrTaskListAlreadyExists = errors.New("task list already exists")
 
 	//handlers
 	ErrUnauthorized   = errors.New("unauthorized")

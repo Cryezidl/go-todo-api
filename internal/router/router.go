@@ -6,16 +6,19 @@ import (
 	"time"
 
 	authhandlers "github.com/Cryezidl/go-todo-api/internal/handlers/auth"
+	tasklisthandlers "github.com/Cryezidl/go-todo-api/internal/handlers/tasklist"
 	userhandlers "github.com/Cryezidl/go-todo-api/internal/handlers/user"
 	authrouters "github.com/Cryezidl/go-todo-api/internal/router/auth"
+	tasklistrouters "github.com/Cryezidl/go-todo-api/internal/router/tasklist"
 	userrouters "github.com/Cryezidl/go-todo-api/internal/router/user"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Handlers struct {
-	AuthHandlers *authhandlers.AuthHandler
-	UserHandlers *userhandlers.UserHandler
+	AuthHandlers     *authhandlers.AuthHandler
+	UserHandlers     *userhandlers.UserHandler
+	TaskListHandlers *tasklisthandlers.TaskListHandlers
 }
 
 type Middlewares struct {
@@ -34,6 +37,7 @@ func SetupRouters(h *Handlers, mw Middlewares) *chi.Mux {
 	r.Route("/api/v1", func(r chi.Router) {
 		userrouters.RegisterUserRoutes(r, h.UserHandlers, mw.Auth)
 		authrouters.RegisterAuthRoutes(r, h.AuthHandlers)
+		tasklistrouters.RegisterTaskListRoutes(r, h.TaskListHandlers, mw.Auth)
 	})
 	return r
 }
