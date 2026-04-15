@@ -15,6 +15,8 @@ var (
 	ErrTaskListNotFound      = errors.New("task list not found")
 	ErrAccessDenied          = errors.New("access denied")
 	ErrTaskListAlreadyExists = errors.New("task list already exists")
+	//Task
+	ErrTaskNotFound = errors.New("task not found")
 
 	//handlers
 	ErrUnauthorized   = errors.New("unauthorized")

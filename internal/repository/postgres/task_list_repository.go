@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	_ "github.com/lib/pq"
 )
 
 type TaskListRepository struct {
@@ -47,18 +46,17 @@ func (r *TaskListRepository) Create(ctx context.Context, taskList *model.TaskLis
 				if strings.Contains(pqErr.Message, "title") {
 					return myerrors.ErrTaskListAlreadyExists
 				}
-				return err
 			}
 		}
+		return err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
-		if err := rows.Scan(&taskList.CreatedAt, &taskList.UpdatedAt); err != nil {
+		if err := rows.Scan(&taskList.ID, &taskList.CreatedAt); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
