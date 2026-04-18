@@ -28,6 +28,7 @@ func (r *TaskListRepository) Create(ctx context.Context, taskList *model.TaskLis
 	r.log.Debug("attempting to create task list",
 		slog.String("op", op),
 		slog.String("title", taskList.Title),
+		slog.String("user_id", taskList.UserID.String()),
 	)
 
 	query := `
@@ -35,27 +36,37 @@ func (r *TaskListRepository) Create(ctx context.Context, taskList *model.TaskLis
 	user_id, title, description, is_private) 
 	VALUES (
 	:user_id, :title, :description, :is_private)
-	RETURNING id, created_at`
+	RETURNING id, created_at, updated_at`
 
 	rows, err := r.db.NamedQueryContext(ctx, query, taskList)
-
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) {
 			if pqErr.Code == "23505" { // Unique Violation
 				if strings.Contains(pqErr.Message, "title") {
+					r.log.Warn("task list already exists", slog.String("op", op), slog.String("title", taskList.Title))
 					return myerrors.ErrTaskListAlreadyExists
 				}
 			}
 		}
+		r.log.Error("failed to execute insert", slog.String("op", op), slog.String("error", err.Error()))
 		return err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
-		if err := rows.Scan(&taskList.ID, &taskList.CreatedAt); err != nil {
+		if err := rows.Scan(&taskList.ID, &taskList.CreatedAt, &taskList.UpdatedAt); err != nil {
+			r.log.Error("failed to scan returned values", slog.String("op", op), slog.String("error", err.Error()))
 			return err
 		}
+		r.log.Debug("task list created successfully",
+			slog.String("op", op),
+			slog.String("id", taskList.ID.String()),
+			slog.String("title", taskList.Title),
+		)
+	} else {
+		r.log.Error("no rows returned after insert", slog.String("op", op))
+		return errors.New("no rows returned after insert")
 	}
 	return nil
 }
@@ -80,7 +91,7 @@ func (r *TaskListRepository) FindById(ctx context.Context, ID uuid.UUID) (*model
 			return nil, myerrors.ErrTaskListNotFound
 		}
 
-		r.log.Error("failed to get task lsit by id",
+		r.log.Error("failed to get task list by id",
 			slog.String("op", op),
 			slog.String("error", err.Error()),
 			slog.String("id", ID.String()),
@@ -90,8 +101,8 @@ func (r *TaskListRepository) FindById(ctx context.Context, ID uuid.UUID) (*model
 
 	r.log.Debug("task list was found",
 		slog.String("op", op),
+		slog.String("id", taskList.ID.String()),
 		slog.String("title", taskList.Title),
-		slog.String("id", ID.String()),
 	)
 	return taskList, nil
 }
@@ -99,22 +110,29 @@ func (r *TaskListRepository) FindById(ctx context.Context, ID uuid.UUID) (*model
 func (r *TaskListRepository) FindByUserID(ctx context.Context, userID uuid.UUID) ([]*model.TaskList, error) {
 	op := "repository.postgres.TaskListRepository.FindByUserID"
 
-	r.log.Debug("attempting to get task list by user id",
+	r.log.Debug("attempting to get task lists by user id",
 		slog.String("op", op),
 		slog.String("userID", userID.String()),
 	)
 
-	taskLists := []*model.TaskList{}
-	query := `SELECT * FROM task_lists WHERE user_id=$1`
+	var taskLists []*model.TaskList
+	query := `SELECT * FROM task_lists WHERE user_id=$1 ORDER BY created_at DESC`
 
 	err := r.db.SelectContext(ctx, &taskLists, query, userID)
 	if err != nil {
 		r.log.Error("failed to get task lists",
 			slog.String("op", op),
 			slog.String("error", err.Error()),
+			slog.String("userID", userID.String()),
 		)
 		return nil, err
 	}
+
+	r.log.Debug("task lists retrieved successfully",
+		slog.String("op", op),
+		slog.Int("count", len(taskLists)),
+		slog.String("userID", userID.String()),
+	)
 	return taskLists, nil
 }
 
@@ -123,6 +141,7 @@ func (r *TaskListRepository) Update(ctx context.Context, taskList *model.TaskLis
 	r.log.Debug("attempting to update task list",
 		slog.String("op", op),
 		slog.String("id", taskList.ID.String()),
+		slog.String("title", taskList.Title),
 	)
 
 	query := `
@@ -133,23 +152,44 @@ func (r *TaskListRepository) Update(ctx context.Context, taskList *model.TaskLis
 		is_private = :is_private,
 		updated_at = NOW()
     WHERE id = :id
-	RETURNING`
+	RETURNING updated_at`
 
 	rows, err := r.db.NamedQueryContext(ctx, query, taskList)
 	if err != nil {
+		r.log.Error("failed to execute update",
+			slog.String("op", op),
+			slog.String("error", err.Error()),
+			slog.String("id", taskList.ID.String()),
+		)
 		return err
 	}
 	defer rows.Close()
 
 	if !rows.Next() {
+		r.log.Warn("task list not found for update",
+			slog.String("op", op),
+			slog.String("id", taskList.ID.String()),
+		)
 		return myerrors.ErrTaskListNotFound
 	}
 
 	if err := rows.Scan(&taskList.UpdatedAt); err != nil {
+		r.log.Error("failed to scan updated_at",
+			slog.String("op", op),
+			slog.String("error", err.Error()),
+			slog.String("id", taskList.ID.String()),
+		)
 		return err
 	}
+
+	r.log.Debug("task list updated successfully",
+		slog.String("op", op),
+		slog.String("id", taskList.ID.String()),
+		slog.String("updated_at", taskList.UpdatedAt.String()),
+	)
 	return nil
 }
+
 func (r *TaskListRepository) Delete(ctx context.Context, ID uuid.UUID) error {
 	op := "repository.postgres.TaskListRepository.Delete"
 
@@ -159,7 +199,7 @@ func (r *TaskListRepository) Delete(ctx context.Context, ID uuid.UUID) error {
 	)
 
 	query := `DELETE FROM task_lists WHERE id=$1`
-	rows, err := r.db.ExecContext(ctx, query, ID)
+	result, err := r.db.ExecContext(ctx, query, ID)
 
 	if err != nil {
 		r.log.Error("failed to delete task list",
@@ -169,18 +209,28 @@ func (r *TaskListRepository) Delete(ctx context.Context, ID uuid.UUID) error {
 		)
 		return err
 	}
-	rowsCount, _ := rows.RowsAffected()
+
+	rowsCount, err := result.RowsAffected()
+	if err != nil {
+		r.log.Error("failed to get rows affected",
+			slog.String("op", op),
+			slog.String("error", err.Error()),
+		)
+		return err
+	}
+
 	if rowsCount == 0 {
-		r.log.Error("task list not found",
+		r.log.Warn("task list not found for deletion",
 			slog.String("op", op),
 			slog.String("id", ID.String()),
 		)
 		return myerrors.ErrTaskListNotFound
 	}
 
-	r.log.Debug("task list was deleted",
+	r.log.Debug("task list deleted successfully",
 		slog.String("op", op),
 		slog.String("id", ID.String()),
+		slog.Int64("rows_affected", rowsCount),
 	)
 	return nil
 }

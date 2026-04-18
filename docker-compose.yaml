@@ -7,6 +7,7 @@
 # You can add other services your application may depend on here, such as a
 # database or a cache. For examples, see the Awesome Compose repository:
 # https://github.com/docker/awesome-compose
+# docker-compose.yml
 services:
   server:
     build:
@@ -15,9 +16,9 @@ services:
     ports:
       - "${PORT:-8080}:8080"
     env_file:
-      - .env  
+      - .env
     environment:
-      - DB_HOST=db
+      - DB_HOST=db  # Переопределяем хост БД для Docker
     depends_on:
       db:
         condition: service_healthy
@@ -28,13 +29,14 @@ services:
     image: postgres:16-alpine
     restart: always
     environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"  
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d  # Добавляем миграции
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s

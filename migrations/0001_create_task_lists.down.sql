@@ -1,1 +1,1 @@
-DELETE TABLE IF EXISTS task_lists;
+DROP TABLE IF EXISTS task_lists CASCADE;

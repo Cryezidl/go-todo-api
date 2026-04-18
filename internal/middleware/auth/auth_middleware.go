@@ -28,7 +28,7 @@ func AuthMiddleware(secretKey string, log *slog.Logger) func(http.Handler) http.
 				httputils.RespondWithError(w, http.StatusUnauthorized, myerrors.ErrInvalidToken.Error(), log)
 				return
 			}
-			token := parts[0]
+			token := parts[1]
 
 			claims, err := jwtutils.ParseJWTToken(token, []byte(secretKey))
 			if err != nil {

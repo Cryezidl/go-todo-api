@@ -1,5 +1,5 @@
 CREATE TABLE tasks (
-    id UUID PRIMARY KEY gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     list_id UUID NOT NULL,
     user_id UUID NOT NULL,
     title TEXT NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE tasks (
     tags TEXT[],
     completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
 
     
     CONSTRAINT fk_list FOREIGN KEY (list_id) REFERENCES task_lists(id) ON DELETE CASCADE,

@@ -18,11 +18,11 @@ import (
 )
 
 type TaskListHandlers struct {
-	taskListService service.TaskListService
+	taskListService *service.TaskListService
 	log             *slog.Logger
 }
 
-func NewTaskListHandlers(taskListService service.TaskListService, log *slog.Logger) *TaskListHandlers {
+func NewTaskListHandlers(taskListService *service.TaskListService, log *slog.Logger) *TaskListHandlers {
 	return &TaskListHandlers{taskListService: taskListService, log: log}
 }
 

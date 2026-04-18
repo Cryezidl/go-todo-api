@@ -70,6 +70,9 @@ func ValidatePassword(password string) error {
 }
 
 func ValidateLanguage(lang string) error {
+	if lang == "" {
+		return nil
+	}
 	if !allowedLanguages[strings.ToUpper(lang)] {
 		return myerrors.ErrInvalidLanguage
 	}
@@ -77,6 +80,9 @@ func ValidateLanguage(lang string) error {
 }
 
 func ValidateTheme(theme string) error {
+	if theme == "" {
+		return nil
+	}
 	if !allowedThemes[strings.ToLower(theme)] {
 		return myerrors.ErrInvalidTheme
 	}
@@ -84,6 +90,9 @@ func ValidateTheme(theme string) error {
 }
 
 func ValidateTimezone(tz string) error {
+	if tz == "" {
+		return nil
+	}
 	if _, err := time.LoadLocation(tz); err != nil {
 		return myerrors.ErrInvalidTimezone
 	}

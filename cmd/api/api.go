@@ -16,11 +16,15 @@ import (
 
 	"github.com/Cryezidl/go-todo-api/internal/config"
 	authhandlers "github.com/Cryezidl/go-todo-api/internal/handlers/auth"
+	taskhandlers "github.com/Cryezidl/go-todo-api/internal/handlers/task"
+	tasklisthandlers "github.com/Cryezidl/go-todo-api/internal/handlers/tasklist"
 	userhandlers "github.com/Cryezidl/go-todo-api/internal/handlers/user"
 	authMW "github.com/Cryezidl/go-todo-api/internal/middleware/auth"
-	userrepository "github.com/Cryezidl/go-todo-api/internal/repository/postgres"
+	repo "github.com/Cryezidl/go-todo-api/internal/repository/postgres"
 	"github.com/Cryezidl/go-todo-api/internal/router"
 	authservice "github.com/Cryezidl/go-todo-api/internal/service/auth"
+	taskservice "github.com/Cryezidl/go-todo-api/internal/service/task"
+	tasklistservice "github.com/Cryezidl/go-todo-api/internal/service/tasklist"
 	userservice "github.com/Cryezidl/go-todo-api/internal/service/user"
 )
 
@@ -31,18 +35,25 @@ func RunAPI(cfg *config.Config, log *slog.Logger) error {
 		return err
 	}
 	//инициализировать репозитории
-	userRepository := userrepository.NewUserRepository(db, log)
+	userRepository := repo.NewUserRepository(db, log)
+	taskRepository := repo.NewTaskRepository(db, log)
+	taskListRepository := repo.NewTaskListRepository(db, log)
 
 	//инициализировать service
 	userService := userservice.NewUserService(userRepository, log)
 	authService := authservice.NewAuthService(userRepository, log, cfg.JWT.Secret, cfg.JWT.Expiration)
+	taskService := taskservice.NewTaskService(taskRepository, taskListRepository, log)
+	taskListService := tasklistservice.NewTaskListService(taskListRepository, log)
 
 	//иннициализировать handlers
 	userHandlers := userhandlers.NewUserHandler(userService, log)
 	authHandlers := authhandlers.NewAuthHandler(authService, log, cfg.JWT.Expiration)
+	taskHandlers := taskhandlers.NewTaskHandlers(taskService, taskListService, log)
+	taskListHandlers := tasklisthandlers.NewTaskListHandlers(taskListService, log)
 
 	//собрать handlers и middlewares для роутера
-	h := &router.Handlers{UserHandlers: userHandlers, AuthHandlers: authHandlers}
+	h := &router.Handlers{UserHandlers: userHandlers, AuthHandlers: authHandlers,
+		TaskListHandlers: taskListHandlers, TaskHandlers: taskHandlers}
 	mw := router.Middlewares{Auth: authMW.AuthMiddleware(cfg.JWT.Secret, log)}
 	//настроить роутер
 	r := router.SetupRouters(h, mw)
@@ -70,7 +81,7 @@ func RunAPI(cfg *config.Config, log *slog.Logger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if  err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(ctx); err != nil {
 		return fmt.Errorf("server forced to shutdown: %w", err)
 	}
 	if err := db.Close(); err != nil {

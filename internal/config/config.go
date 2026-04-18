@@ -35,8 +35,31 @@ type Config struct {
 
 func MustLoad() *Config {
 	var cfg Config
-	if err := cleanenv.ReadConfig(".env", &cfg); err != nil {
-		log.Fatalf("config error: %v", err)
+
+	_ = cleanenv.ReadConfig(".env", &cfg)
+
+	if err := cleanenv.ReadEnv(&cfg); err != nil {
+		log.Printf("Warning: failed to read env: %v", err)
 	}
+
+	if cfg.DB.Host == "" {
+		log.Fatal("DB_HOST is required")
+	}
+	if cfg.DB.User == "" {
+		log.Fatal("DB_USER is required")
+	}
+	if cfg.DB.Password == "" {
+		log.Fatal("DB_PASSWORD is required")
+	}
+	if cfg.DB.Name == "" {
+		log.Fatal("DB_NAME is required")
+	}
+	if cfg.JWT.Secret == "" {
+		log.Fatal("JWT_SECRET is required")
+	}
+
+	log.Printf("Config loaded: DB_HOST=%s, DB_NAME=%s, APP_ENV=%s",
+		cfg.DB.Host, cfg.DB.Name, cfg.App.Env)
+
 	return &cfg
 }
